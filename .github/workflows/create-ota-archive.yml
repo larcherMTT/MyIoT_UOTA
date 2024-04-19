@@ -1,0 +1,32 @@
+name: Create tar.gz Archive for OTA Updates
+run-name: ${{ github.actor }} - Create tar.gz Archive for OTA Updates
+
+on:
+  push:
+    paths:
+      - 'IoT_devices/TH_sensor_pico/software/src/**'
+
+permissions:
+  contents: write
+
+jobs:
+  create-archive:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Remove old archive
+      run: |
+        rm -f IoT_devices/TH_sensor_pico/software/firmware.tar.gz
+
+    - name: Create Tar.gz Archive
+      run: |
+        tar -czvf IoT_devices/TH_sensor_pico/software/firmware.tar.gz -C IoT_devices/TH_sensor_pico/software/src .
+
+    - name: Commit the generated archive
+      uses: EndBug/add-and-commit@v9
+      with:
+        add: 'IoT_devices/TH_sensor_pico/software/firmware.tar.gz'
+        default_author: github_actions
