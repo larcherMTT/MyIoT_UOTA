@@ -41,7 +41,7 @@ mqtt_client.connect()
 # The topic to publish data to
 mqtt_publish_topic = config.MQTT_PUBLISH_TOPIC
 
-# Initialize the LED
+# Initialize the DHT11 power pin
 dht_pin = machine.Pin(4, machine.Pin.OUT)
 
 #initialize DHT11 sensor
@@ -60,6 +60,8 @@ try:
     dht_sensor.measure()
     temp_dht = float(dht_sensor.temperature())
     hum_dht = float(dht_sensor.humidity())
+    # power off the DHT sensor
+    dht_pin.off()
 
     # Publish the data to the topics! with %3.1f format
     mqtt_client.publish(f'{mqtt_publish_topic}/temperature', str(temp_dht))
@@ -69,11 +71,7 @@ try:
 
     # power off the wifi
     wlan.active(False)
-    # power off the DHT sensor
-    dht_pin.off()
-    # machine reset
-    machine.reset()
-    # Sleep for 60 seconds
+    # Sleep
     machine.lightsleep(60000)
 except Exception as e:
   print(f'Failed to publish message: {e}')
