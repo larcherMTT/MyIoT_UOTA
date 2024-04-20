@@ -60,12 +60,14 @@ try:
       dht_sensor.measure()
       temp_dht = float(dht_sensor.temperature())
       hum_dht = float(dht_sensor.humidity())
+      time.sleep(1.0)
+      # power off the DHT sensor
+      dht_pin.off()
     except Exception as e:
       print(f'Failed to read temperature and humidity: {e}')
+      # power off the DHT sensor
+      dht_pin.off()
       continue
-    time.sleep(1.0)
-    # power off the DHT sensor
-    dht_pin.off()
 
     # Publish the data to the topics! with %3.1f format
     try:
