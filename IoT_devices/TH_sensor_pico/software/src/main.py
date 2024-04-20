@@ -64,10 +64,11 @@ try:
     dht_pin.off()
 
     # Publish the data to the topics! with %3.1f format
-    mqtt_client.publish(f'{mqtt_publish_topic}/temperature', str(temp_dht), qos=1)
-    mqtt_client.publish(f'{mqtt_publish_topic}/humidity', str(hum_dht), qos=1)
+    mqtt_client.publish(f'{mqtt_publish_topic}/temperature', str(temp_dht), qos=0)
+    mqtt_client.publish(f'{mqtt_publish_topic}/humidity', str(hum_dht), qos=0)
     print(f'Temperature: {temp_dht}')
     print(f'Humidity: {hum_dht}')
+    time.sleep(0.1)
 
     # power off the wifi
     wlan.active(False)
