@@ -41,6 +41,9 @@ mqtt_client.connect()
 # The topic to publish data to
 mqtt_publish_topic = config.MQTT_PUBLISH_TOPIC
 
+# Initialize the WiFi power pin
+wifi_pin = machine.Pin(23, machine.Pin.OUT)
+
 # Initialize the DHT11 power pin
 dht_pin = machine.Pin(4, machine.Pin.OUT)
 
@@ -51,6 +54,7 @@ dht_sensor = dht.DHT11(machine.Pin(5))
 try:
   while True:
     # activate the wifi
+    wifi_pin.high() # turn on wifi power
     wlan.active(True)
 
     # power on the DHT sensor
@@ -60,19 +64,17 @@ try:
       dht_sensor.measure()
       temp_dht = float(dht_sensor.temperature())
       hum_dht = float(dht_sensor.humidity())
-      time.sleep(1.0)
-      # power off the DHT sensor
-      dht_pin.off()
     except Exception as e:
       print(f'Failed to read temperature and humidity: {e}')
-      # power off the DHT sensor
-      dht_pin.off()
       continue
+    time.sleep(1.0)
+    # power off the DHT sensor
+    dht_pin.off()
 
     # Publish the data to the topics! with %3.1f format
     try:
-      mqtt_client.publish(f'{mqtt_publish_topic}/temperature', str(temp_dht), qos=0)
-      mqtt_client.publish(f'{mqtt_publish_topic}/humidity', str(hum_dht), qos=0)
+      mqtt_client.publish(f'{mqtt_publish_topic}/temperature', str(temp_dht), qos=1)
+      mqtt_client.publish(f'{mqtt_publish_topic}/humidity', str(hum_dht), qos=1)
       print(f'Temperature: {temp_dht}')
       print(f'Humidity: {hum_dht}')
     except Exception as e:
@@ -82,9 +84,9 @@ try:
 
     # power off the wifi
     wlan.active(False)
-    machine.Pin(23, machine.Pin.OUT).low() # turn off wifi power
+    wifi_pin.low() # turn off wifi power
     # Sleep
-    machine.lightsleep(60000)
+    machine.deepsleep(60000)
 except Exception as e:
   print(f'Error: {e}')
 finally:
@@ -92,3 +94,4 @@ finally:
   wlan.active(False)
   dht_pin.off()
   machine.reset()
+
