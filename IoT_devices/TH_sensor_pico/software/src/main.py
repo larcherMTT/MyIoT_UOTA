@@ -55,24 +55,25 @@ try:
 
     # power on the DHT sensor
     dht_pin.on()
-    time.sleep(0.1)
     # read the temperature and humidity
     dht_sensor.measure()
     temp_dht = float(dht_sensor.temperature())
     hum_dht = float(dht_sensor.humidity())
+    time.sleep(0.1)
     # power off the DHT sensor
     dht_pin.off()
 
     # Publish the data to the topics! with %3.1f format
-    mqtt_client.publish(f'{mqtt_publish_topic}/temperature', str(temp_dht))
-    mqtt_client.publish(f'{mqtt_publish_topic}/humidity', str(hum_dht))
+    mqtt_client.publish(f'{mqtt_publish_topic}/temperature', str(temp_dht), qos=1)
+    mqtt_client.publish(f'{mqtt_publish_topic}/humidity', str(hum_dht), qos=1)
     print(f'Temperature: {temp_dht}')
     print(f'Humidity: {hum_dht}')
 
     # power off the wifi
     wlan.active(False)
+    machine.Pin(23, machine.Pin.OUT).low() # turn off wifi power
     # Sleep
-    machine.lightsleep(60000)
+    machine.deepsleep(60000)
 except Exception as e:
   print(f'Failed to publish message: {e}')
 finally:
