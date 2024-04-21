@@ -89,9 +89,10 @@ try:
     machine.deepsleep(60000)
 except Exception as e:
   print(f'Error: {e}')
+  try:
+    mqtt_client.publish(f'{mqtt_publish_topic}/error', str(e), qos=1)
+  except Exception as e:
+    print(f'Failed to publish message: {e}')
 finally:
-  mqtt_client.disconnect()
-  wlan.active(False)
-  dht_pin.off()
   machine.reset()
 
