@@ -10,6 +10,7 @@ import machine
 import dht
 import uota
 import uasyncio as asyncio
+import gc
 
 # Import the config file
 import config
@@ -75,6 +76,11 @@ async def measure():
     print(f'Temperature: {temp_dht}')
     print(f'Humidity: {hum_dht}')
     time.sleep(0.2)
+
+    # Garbage collect
+    gc.collect()
+    #sending info on RAM usage
+    mqtt_client.publish(f'{mqtt_publish_topic}/ram', str(gc.mem_info()), qos=1)
 
     # power off the wifi
     wlan.active(False)
