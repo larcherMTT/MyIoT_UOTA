@@ -9,6 +9,7 @@ from umqtt.simple import MQTTClient
 import machine
 import dht
 import uota
+import uasyncio as asyncio
 
 # Import the config file
 import config
@@ -50,49 +51,69 @@ dht_pin = machine.Pin(4, machine.Pin.OUT)
 #initialize DHT11 sensor
 dht_sensor = dht.DHT11(machine.Pin(5))
 
-# Publish a data point to the topic every XX seconds
-try:
-  while True:
+async def measure():
+  try:
     # activate the wifi
     wifi_pin.high() # turn on wifi power
     wlan.active(True)
+    while wlan.isconnected() == False:
+      print('Waiting for connection...')
+      time.sleep(1)
 
     # power on the DHT sensor
     dht_pin.on()
     # read the temperature and humidity
-    try:
-      dht_sensor.measure()
-      temp_dht = float(dht_sensor.temperature())
-      hum_dht = float(dht_sensor.humidity())
-    except Exception as e:
-      print(f'Failed to read temperature and humidity: {e}')
-      continue
-    time.sleep(1.0)
+    dht_sensor.measure()
+    temp_dht = float(dht_sensor.temperature())
+    hum_dht = float(dht_sensor.humidity())
     # power off the DHT sensor
     dht_pin.off()
 
-    # Publish the data to the topics! with %3.1f format
-    try:
-      mqtt_client.publish(f'{mqtt_publish_topic}/temperature', str(temp_dht), qos=1)
-      mqtt_client.publish(f'{mqtt_publish_topic}/humidity', str(hum_dht), qos=1)
-      print(f'Temperature: {temp_dht}')
-      print(f'Humidity: {hum_dht}')
-    except Exception as e:
-      print(f'Failed to publish message: {e}')
-      continue
+    # Publish the data to the topics!
+    mqtt_client.publish(f'{mqtt_publish_topic}/temperature', str(temp_dht), qos=1)
+    mqtt_client.publish(f'{mqtt_publish_topic}/humidity', str(hum_dht), qos=1)
+    print(f'Temperature: {temp_dht}')
+    print(f'Humidity: {hum_dht}')
     time.sleep(0.2)
 
     # power off the wifi
     wlan.active(False)
     wifi_pin.low() # turn off wifi power
-    # Sleep
-    machine.deepsleep(60000)
-except Exception as e:
-  print(f'Error: {e}')
-  try:
-    mqtt_client.publish(f'{mqtt_publish_topic}/error', str(e), qos=1)
+
+  except asyncio.CancelledError:  # Task sees CancelledError
+    print('Trapped cancelled error.')
+    try:
+      mqtt_client.publish(f'{mqtt_publish_topic}/error', 'CancelledError', qos=1)
+    except Exception as e:
+      print(f'Failed to publish message: {e}')
+    raise
   except Exception as e:
-    print(f'Failed to publish message: {e}')
-finally:
-  machine.reset()
+    print(f'Error: {e}')
+    try:
+      mqtt_client.publish(f'{mqtt_publish_topic}/error', str(e), qos=1)
+    except Exception as e:
+      print(f'Failed to publish message: {e}')
+
+async def main():
+    try:
+        while True:
+          await asyncio.wait_for(measure(), 5) # Wait for 5 seconds
+          # Sleep
+          machine.deepsleep(60000)
+    except asyncio.TimeoutError:  # Mandatory error trapping
+        print('measure got timeout')
+        try:
+          await asyncio.wait_for(mqtt_client.publish(f'{mqtt_publish_topic}/error', 'TimeoutError', qos=1), 1)
+        except Exception as e:
+          print(f'Failed to publish message: {e}')
+    finally:
+      machine.reset()
+
+# Run the main function
+asyncio.run(main())
+machine.reset()
+
+
+
+
 
