@@ -80,7 +80,7 @@ async def measure():
     # Garbage collect
     gc.collect()
     #sending info on RAM usage
-    mqtt_client.publish(f'{mqtt_publish_topic}/ram', str(gc.mem_info()), qos=1)
+    mqtt_client.publish(f'{mqtt_publish_topic}/ram', str(gc.mem_free()), qos=1)
 
     # power off the wifi
     wlan.active(False)
