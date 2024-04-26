@@ -15,6 +15,9 @@ import gc
 # Import the config file
 import config
 
+# Enable automatic garbage collection
+gc.enable()
+
 # Connect to WiFi
 wlan = network.WLAN(network.STA_IF)
 wlan.active(True)
@@ -46,11 +49,45 @@ mqtt_publish_topic = config.MQTT_PUBLISH_TOPIC
 # Initialize the WiFi power pin
 wifi_pin = machine.Pin(23, machine.Pin.OUT)
 
+# Pin 29 used for ADC3 and WiFi
+pin_29 = machine.Pin(29)
+
 # Initialize the DHT11 power pin
 dht_pin = machine.Pin(4, machine.Pin.OUT)
 
 #initialize DHT11 sensor
 dht_sensor = dht.DHT11(machine.Pin(5))
+
+async def read_onboard_voltage():
+    pin_29.init(machine.Pin.IN) # to read the ADC 3 voltage correctly
+    ADC_raw = machine.ADC(3).read_u16()
+    ADC_voltage = ((ADC_raw * 3) / 65535) * 3.3
+    mqtt_client.publish(f'{mqtt_publish_topic}/voltage', str(ADC_voltage), qos=1)
+    print(f'Voltage: {ADC_voltage}')
+    pin_29.init(mode=machine.Pin.ALT, pull=machine.Pin.PULL_DOWN, alt=7) # to set back correctly for wifi module to work
+
+async def read_dht():
+  # power on the DHT sensor
+  dht_pin.on()
+  # read the temperature and humidity
+  dht_sensor.measure()
+  temp_dht = float(dht_sensor.temperature())
+  hum_dht = float(dht_sensor.humidity())
+  # power off the DHT sensor
+  dht_pin.off()
+
+  # Publish the data to the topics!
+  mqtt_client.publish(f'{mqtt_publish_topic}/temperature', str(temp_dht), qos=1)
+  mqtt_client.publish(f'{mqtt_publish_topic}/humidity', str(hum_dht), qos=1)
+  print(f'Temperature: {temp_dht}')
+  print(f'Humidity: {hum_dht}')
+
+async def read_ram():
+  if config.DEBUG_MODE:
+    #sending info on RAM usage
+    ram_free = gc.mem_free()
+    mqtt_client.publish(f'{mqtt_publish_topic}/ram', str(ram_free), qos=1)
+    print(f'RAM: {ram_free}')
 
 async def measure():
   try:
@@ -61,44 +98,34 @@ async def measure():
       print('Waiting for connection...')
       time.sleep(1)
 
-    # power on the DHT sensor
-    dht_pin.on()
-    # read the temperature and humidity
-    dht_sensor.measure()
-    temp_dht = float(dht_sensor.temperature())
-    hum_dht = float(dht_sensor.humidity())
-    # power off the DHT sensor
-    dht_pin.off()
+    # tasks
+    tasks = [
+      read_onboard_voltage(),
+      read_dht(),
+      read_ram()
+    ]
 
-    # Publish the data to the topics!
-    mqtt_client.publish(f'{mqtt_publish_topic}/temperature', str(temp_dht), qos=1)
-    mqtt_client.publish(f'{mqtt_publish_topic}/humidity', str(hum_dht), qos=1)
-    print(f'Temperature: {temp_dht}')
-    print(f'Humidity: {hum_dht}')
-    time.sleep(0.2)
-
-    # Garbage collect
-    gc.collect()
-    #sending info on RAM usage
-    mqtt_client.publish(f'{mqtt_publish_topic}/ram', str(gc.mem_free()), qos=1)
+    # Run all async functions concurrently
+    await asyncio.gather(*tasks)
 
     # power off the wifi
     wlan.active(False)
+    for i in range(5):
+      if wlan.isconnected() == True:
+        print('Waiting for wifi to power off...')
+        time.sleep(1)
+      else:
+        break
+    time.sleep(2) # wait for wifi to power off
     wifi_pin.low() # turn off wifi power
 
   except asyncio.CancelledError:  # Task sees CancelledError
     print('Trapped cancelled error.')
-    try:
-      mqtt_client.publish(f'{mqtt_publish_topic}/error', 'CancelledError', qos=1)
-    except Exception as e:
-      print(f'Failed to publish message: {e}')
+    mqtt_client.publish(f'{mqtt_publish_topic}/error', 'CancelledError', qos=1)
     raise
   except Exception as e:
     print(f'Error: {e}')
-    try:
-      mqtt_client.publish(f'{mqtt_publish_topic}/error', str(e), qos=1)
-    except Exception as e:
-      print(f'Failed to publish message: {e}')
+    mqtt_client.publish(f'{mqtt_publish_topic}/error', str(e), qos=1)
 
 async def main():
     try:
@@ -118,8 +145,4 @@ async def main():
 # Run the main function
 asyncio.run(main())
 machine.reset()
-
-
-
-
 
