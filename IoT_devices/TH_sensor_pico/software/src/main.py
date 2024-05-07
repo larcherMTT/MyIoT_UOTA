@@ -141,7 +141,7 @@ async def measure_and_send():
     la6.low()
 
     # activate the wifi
-    machine.Pin(23, machine.Pin.OUT).high() # wifi module power
+    #machine.Pin(23, machine.Pin.OUT).high() # wifi module power
     time.sleep(0.1)
     la6.high()
     time.sleep(0.1)
@@ -162,7 +162,7 @@ async def measure_and_send():
     wlan.active(False)
     time.sleep(1) # wait for deactivation
     machine.Pin("WL_GPIO1", machine.Pin.OUT).low() # smps low power mode
-    machine.Pin(23, machine.Pin.OUT).low() # wifi module power
+    #machine.Pin(23, machine.Pin.OUT).low() # wifi module power
     la0.low()
     time.sleep(0.2)
 
