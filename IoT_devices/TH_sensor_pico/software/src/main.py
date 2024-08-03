@@ -59,7 +59,7 @@ def mqtt_connect():
 
 # Connect to WiFi
 machine.Pin(23, machine.Pin.OUT).high() # wifi module power
-time.sleep(0.2)
+time.sleep(1.0)
 if not wifi_connect():
   machine.reset()
 
@@ -77,7 +77,7 @@ mqtt_connect()
 mqtt_publish_topic = config.MQTT_PUBLISH_TOPIC
 
 # Initialize PINS
-la6 = machine.Pin(28, machine.Pin.OUT) # Logic-Analyzer fro block of code
+la6 = machine.Pin(28, machine.Pin.OUT) # Logic-Analyzer for block of code
 la0 = machine.Pin(27, machine.Pin.OUT) # Logic-Analyzer for awake time
 pin_29 = machine.Pin(29, machine.Pin.OUT) # Pin 29 used for ADC3 and WiFi
 dht_pin = machine.Pin(4, machine.Pin.OUT) # DHT11 power
@@ -141,10 +141,10 @@ async def measure_and_send():
     la6.low()
 
     # activate the wifi
-    #machine.Pin(23, machine.Pin.OUT).high() # wifi module power
-    time.sleep(0.1)
+    machine.Pin(23, machine.Pin.OUT).high() # wifi module power
+    time.sleep(0.2)
     la6.high()
-    time.sleep(0.1)
+    time.sleep(0.2)
     wlan = network.WLAN(network.STA_IF)
     wifi_connect()
 
@@ -156,15 +156,15 @@ async def measure_and_send():
 
     # prepare to sleep
     la6.low()
-    time.sleep(0.1)
+    time.sleep(0.5)
     mqtt_client.disconnect()
     wlan.disconnect()
     wlan.active(False)
-    time.sleep(1) # wait for deactivation
+    time.sleep(1.5) # wait for deactivation
     machine.Pin("WL_GPIO1", machine.Pin.OUT).low() # smps low power mode
-    #machine.Pin(23, machine.Pin.OUT).low() # wifi module power
+    machine.Pin(23, machine.Pin.OUT).low() # wifi module power
     la0.low()
-    time.sleep(0.2)
+    time.sleep(0.5)
 
   except asyncio.CancelledError:  # Task sees CancelledError
     print('Trapped cancelled error.')
@@ -177,7 +177,7 @@ async def measure_and_send():
 async def main():
     try:
         while True:
-          await asyncio.wait_for(measure_and_send(), 10) # Wait
+          await asyncio.wait_for(measure_and_send(), 12) # Wait
           # Sleep
           machine.deepsleep(60000)
     except asyncio.TimeoutError:  # Mandatory error trapping
