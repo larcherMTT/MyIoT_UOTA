@@ -55,7 +55,6 @@ def mqtt_connect():
     mqtt_client.connect()
   except Exception as e:
     print(f'Error: {e}')
-    raise
 
 # Connect to WiFi
 machine.Pin(23, machine.Pin.OUT).high() # wifi module power
@@ -135,7 +134,7 @@ async def measure_and_send():
       read_ram()
     ]
 
-    # Run all async functions concurrently
+    # Run all async functions concurrently (async isn't really parallel)
     la6.high()
     await asyncio.gather(*tasks)
     la6.low()
@@ -169,7 +168,6 @@ async def measure_and_send():
   except asyncio.CancelledError:  # Task sees CancelledError
     print('Trapped cancelled error.')
     mqtt_client.publish(f'{mqtt_publish_topic}/error', 'CancelledError', qos=1)
-    raise
   except Exception as e:
     print(f'Error: {e}')
     mqtt_client.publish(f'{mqtt_publish_topic}/error', str(e), qos=1)
@@ -187,6 +185,8 @@ async def main():
         except Exception as e:
           print(f'Failed to publish message: {e}')
     finally:
+      # Sleep
+      machine.deepsleep(60000)
       machine.reset()
 
 # Run the main function
