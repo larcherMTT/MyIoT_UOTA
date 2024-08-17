@@ -177,7 +177,8 @@ async def main():
         while True:
           await asyncio.wait_for(measure_and_send(), 12) # Wait
           # Sleep
-          machine.deepsleep(60000)
+          # machine.deepsleep(60000) # FIXME: crashes
+          time.sleep(60)
     except asyncio.TimeoutError:  # Mandatory error trapping
         print('measure got timeout')
         try:
@@ -186,7 +187,8 @@ async def main():
           print(f'Failed to publish message: {e}')
     finally:
       # Sleep
-      machine.deepsleep(60000)
+      # machine.deepsleep(60000) # FIXME: crashes
+      time.sleep(60)
       machine.reset()
 
 # Run the main function
